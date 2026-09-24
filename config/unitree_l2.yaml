@@ -1,0 +1,72 @@
+# Simulated Unitree L2 of the Aliengo, FAST-LIO params copied from
+# legged_gazebo/config/fast_lio_unitree_l2.yaml (keep imu_R and extrinsic_R in sync with it).
+# The L2 hangs upside down, imu_R/extrinsic_R rotate it into the upright base frame.
+/**:
+    ros__parameters:
+        feature_extract_enable: false
+        point_filter_num: 1              # unused by the default handler
+        max_iteration: 3
+        filter_size_surf: 0.3
+        filter_size_map: 0.3
+        cube_side_length: 1000.0
+        runtime_pos_log_enable: false
+        map_file_path: ""
+
+        common:
+            lid_topic: "/livox/lidar"
+            imu_topic: "/livox/imu"
+            body_frame: "unilidar_lio"   # not unilidar_lidar: that one is already in the URDF TF tree
+            time_sync_en: false
+            time_offset_lidar_to_imu: 0.0
+
+        preprocess:
+            # Not 1-4 (Livox, Velodyne, Ouster, MID360): the default handler reads plain x y z intensity
+            # and applies no per-point motion compensation, right for the instantaneous Gazebo scans
+            lidar_type: 5
+            scan_line: 36
+            blind: 0.7                   # drops the legs: front legs are 0.1-0.35 m, hind legs ~0.5-0.65 m away
+            timestamp_unit: 3
+            scan_rate: 10
+
+        mapping:
+            acc_cov: 0.1
+            gyr_cov: 0.1
+            b_acc_cov: 0.0001
+            b_gyr_cov: 0.0001
+            fov_degree: 360.0
+            det_range: 30.0              # L2 max range
+            extrinsic_est_en: false      # exact in simulation
+            extrinsic_T: [0.0, 0.0, 0.0]
+            extrinsic_R: [-0.965512, 0.0, 0.260358,
+                           0.0,      1.0, 0.0,
+                          -0.260358, 0.0, -0.965512]
+            imu_R: [-0.965512, 0.0, 0.260358,
+                     0.0,      1.0, 0.0,
+                    -0.260358, 0.0, -0.965512]
+
+        publish:
+            path_en: true
+            effect_map_en: false
+            map_en: false                # the global map comes from the PCD, no need to accumulate /Laser_map
+            scan_publish_en: true
+            dense_publish_en: true       # global_localization matches /cloud_registered, keep it dense
+            scan_bodyframe_pub_en: true
+
+        pcd_save:
+            pcd_save_en: false
+            interval: -1
+
+global_localization:
+    ros__parameters:
+        map_voxel_size: 0.4
+        scan_voxel_size: 0.1
+        freq_localization: 0.5       # Hz
+        localization_th: 0.95        # min ICP fitness to accept a global match
+        fov: 6.28                    # rad, 360 deg LiDAR: distance crop only
+        fov_far: 30.0                # m, L2 max range
+        odom_frame: "camera_init"
+
+transform_fusion:
+    ros__parameters:
+        freq_pub_localization: 50.0  # Hz
+        odom_frame: "camera_init"
