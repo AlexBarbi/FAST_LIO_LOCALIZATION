@@ -103,9 +103,9 @@ ros2 launch fast_lio_localization localization_launch.xml map:=/path/to/your/map
 ```
 
 Please modify `/path/to/your/map.pcd` to your own map point cloud file path.
-Configs shipped in `config/`: `unitree_l2.yaml` (default, simulated Unitree L2), `avia.yaml`, `horizon.yaml`, `mid360.yaml`, `ouster64.yaml`, `velodyne.yaml`.
+Configs shipped in `config/`: `airy.yaml` (default, simulated RoboSense Airy), `avia.yaml`, `horizon.yaml`, `mid360.yaml`, `ouster64.yaml`, `velodyne.yaml`.
 If Open3D lives in a venv, add `python:=$HOME/venv_o3d/bin/python`.
-The launch defaults target the simulated Unitree L2 stack: `fast_lio:=false` reuses the FAST-LIO of
+The launch defaults target the simulated RoboSense Airy stack: `fast_lio:=false` reuses the FAST-LIO of
 `fast_lio_slam_launch.xml`, which must already be running, and `use_sim_time:=true`.
 
 Wait for 3~5 seconds until the map cloud shows up in RVIZ;

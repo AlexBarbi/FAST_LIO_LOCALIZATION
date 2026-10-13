@@ -58,7 +58,7 @@ class GlobalLocalization(Node):
         self.legged_odom_topic = self.declare_parameter('legged_odom_topic', '/odom').value
         # The static TF between them is where the LiDAR sits on the base (FAST-LIO tree of fast_lio_slam_launch.xml)
         self.base_frame = self.declare_parameter('base_frame', 'lio_base').value
-        self.lidar_frame = self.declare_parameter('lidar_frame', 'unilidar_lio').value
+        self.lidar_frame = self.declare_parameter('lidar_frame', 'rslidar_lio').value
 
         self.lock = threading.Lock()
         self.global_map = None

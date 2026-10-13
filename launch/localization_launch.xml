@@ -5,14 +5,14 @@
        map_frame hangs below camera_init, so camera_init keeps any parent it already has
        (odom -> lio_map -> camera_init in the legged stack) and the FAR planner keeps its "map" (= camera_init).
        config_file holds the FAST-LIO params under /** plus the global_localization and
-       transform_fusion sections; pick the one of your LiDAR (unitree_l2, avia, horizon, mid360, ouster64, velodyne).
+       transform_fusion sections; pick the one of your LiDAR (airy, avia, horizon, mid360, ouster64, velodyne).
        Initial pose: with init_from_odom, global_localization guesses it from the legged estimator (/odom), assuming the
        map was built by an exploration that started with the robot standing at the same spawn; it retries every
        1/freq_localization s until ICP matches. publish_initial_pose.py (/initialpose) still overrides it. -->
   <arg name="use_sim_time" default="true" description="Use simulation (Gazebo) clock if true"/>
   <arg name="fast_lio" default="false" description="Run FAST-LIO here; false reuses the one of fast_lio_slam_launch.xml (/Odometry, /cloud_registered), which must be running"/>
   <arg name="config_path" default="$(find-pkg-share fast_lio_localization)/config" description="Yaml config file path"/>
-  <arg name="config_file" default="unitree_l2.yaml" description="Config file"/>
+  <arg name="config_file" default="airy.yaml" description="Config file"/>
   <arg name="map" default="$(env HOME)/RaNAV/src/FAST_LIO_SLAM_ROS2/save_data/optimized_map.pcd" description="Global map point cloud (.pcd)"/>
   <arg name="map_frame" default="global_map" description="Frame of the global map, child of camera_init"/>
   <arg name="python" default="$(env HOME)/RaNAV/.venv-yolo/bin/python" description="Interpreter for the localization scripts, it needs open3d (e.g. the python of a venv created with --system-site-packages)"/>

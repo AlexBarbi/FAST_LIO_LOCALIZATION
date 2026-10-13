@@ -1,10 +1,11 @@
-# Simulated Unitree L2 of the Aliengo, FAST-LIO params copied from
-# legged_gazebo/config/fast_lio_unitree_l2.yaml (keep imu_R and extrinsic_R in sync with it).
-# The L2 hangs upside down, imu_R/extrinsic_R rotate it into the upright base frame.
+# Simulated RoboSense Airy of the Aliengo, FAST-LIO params copied from
+# legged_gazebo/config/fast_lio_airy.yaml (keep imu_R and extrinsic_R in sync with it).
+# The Airy is pitched 5 deg forward, imu_R/extrinsic_R rotate it into the upright base frame (15 deg until 2026-10-13).
 /**:
     ros__parameters:
         feature_extract_enable: false
-        point_filter_num: 1              # unused by the default handler
+        point_filter_num: 4              # every 4th of the 900 columns: 21600 of the 86400 points per scan go to
+                                         # FAST-LIO and on to /cloud_registered (terrain, TARE, SC-PGO keyframes, map)
         max_iteration: 3
         filter_size_surf: 0.3
         filter_size_map: 0.3
@@ -13,18 +14,20 @@
         map_file_path: ""
 
         common:
-            lid_topic: "/livox/lidar"
-            imu_topic: "/livox/imu"
-            body_frame: "unilidar_lio"   # not unilidar_lidar: that one is already in the URDF TF tree
+            lid_topic: "/rslidar_points"
+            imu_topic: "/rslidar_imu_data"
+            lid_reliable: true           # the 900 x 96 clouds are over 2 MB: best effort loses a third of them
+            body_frame: "rslidar_lio"    # not rslidar: that one is already in the URDF TF tree
             time_sync_en: false
             time_offset_lidar_to_imu: 0.0
 
         preprocess:
-            # Not 1-4 (Livox, Velodyne, Ouster, MID360): the default handler reads plain x y z intensity
-            # and applies no per-point motion compensation, right for the instantaneous Gazebo scans
+            # Not 1-4 (Livox, Velodyne, Ouster, MID360): the default handler reads plain x y z intensity, skips
+            # the NaN no-return points and applies no per-point motion compensation, right for the
+            # instantaneous Gazebo scans
             lidar_type: 5
-            scan_line: 36
-            blind: 0.7                   # drops the legs: front legs are 0.1-0.35 m, hind legs ~0.5-0.65 m away
+            scan_line: 96
+            blind: 0.1                   # Airy blind zone; the legs are out of view of the top mount
             timestamp_unit: 3
             scan_rate: 10
 
@@ -34,15 +37,15 @@
             b_acc_cov: 0.0001
             b_gyr_cov: 0.0001
             fov_degree: 360.0
-            det_range: 30.0              # L2 max range
+            det_range: 60.0              # Airy max range
             extrinsic_est_en: false      # exact in simulation
             extrinsic_T: [0.0, 0.0, 0.0]
-            extrinsic_R: [-0.965512, 0.0, 0.260358,
-                           0.0,      1.0, 0.0,
-                          -0.260358, 0.0, -0.965512]
-            imu_R: [-0.965512, 0.0, 0.260358,
-                     0.0,      1.0, 0.0,
-                    -0.260358, 0.0, -0.965512]
+            extrinsic_R: [0.996195, 0.0, 0.087156,
+                          0.0,      1.0, 0.0,
+                          -0.087156, 0.0, 0.996195]
+            imu_R: [0.996195, 0.0, 0.087156,
+                    0.0,      1.0, 0.0,
+                    -0.087156, 0.0, 0.996195]
 
         publish:
             path_en: true
@@ -63,7 +66,7 @@ global_localization:
         freq_localization: 0.5       # Hz
         localization_th: 0.95        # min ICP fitness to accept a global match
         fov: 6.28                    # rad, 360 deg LiDAR: distance crop only
-        fov_far: 30.0                # m, L2 max range
+        fov_far: 60.0                # m, Airy max range
         odom_frame: "camera_init"
 
 transform_fusion:
