@@ -64,6 +64,7 @@ class GlobalLocalization(Node):
         self.global_map = None
         self.global_map_points = None
         self.initialized = False
+        self.matched = None  # result of the last ICP run (None: none yet), for the logs
         self.T_map_to_odom = np.eye(4)
         self.cur_odom = None
         self.cur_scan = None
@@ -138,13 +139,13 @@ class GlobalLocalization(Node):
 
     def global_localization(self, pose_estimation):
         # 用icp配准
-        self.get_logger().info('Global localization by scan-to-map matching......')
-
+        # Quiet: one line when the map is missed (the first time, or after a match) and one when it is matched again,
+        # nothing for the ICP runs in between (one every 1 / freq_localization s)
         with self.lock:
             scan_msg = self.cur_scan
             cur_odom = self.cur_odom
         if scan_msg is None or cur_odom is None:
-            self.get_logger().warn('First scan or odometry not received!!!!!')
+            self.get_logger().warn('First scan or odometry not received yet', once=True)
             return False
         scan_tobe_mapped = o3d.geometry.PointCloud()
         scan_tobe_mapped.points = o3d.utility.Vector3dVector(msg_to_array(scan_msg))
@@ -161,10 +162,12 @@ class GlobalLocalization(Node):
         transformation, fitness = self.registration_at_scale(scan_tobe_mapped, global_map_in_FOV,
                                                              initial=transformation, scale=1)
         toc = time.time()
-        self.get_logger().info('Time: {}'.format(toc - tic))
 
         # 当全局定位成功时才更新map2odom
         if fitness > self.localization_th:
+            if self.matched is False and self.initialized:
+                self.get_logger().info(f'Map matched again (fitness {fitness:.3f})')
+            self.matched = True
             self.T_map_to_odom = transformation
 
             # 发布map_to_odom
@@ -176,9 +179,10 @@ class GlobalLocalization(Node):
             self.pub_map_to_odom.publish(map_to_odom)
             return True
         else:
-            self.get_logger().warn('Not match!!!!')
-            self.get_logger().warn('{}'.format(transformation))
-            self.get_logger().warn('fitness score:{}'.format(fitness))
+            if self.matched is not False:
+                self.get_logger().warn(f'No map match (fitness {fitness:.3f} < localization_th {self.localization_th}, '
+                                       f'ICP {toc - tic:.2f} s): retrying every {1.0 / self.freq_localization:.0f} s')
+            self.matched = False
             return False
 
     def cb_global_map(self, pc_msg):
@@ -249,7 +253,7 @@ class GlobalLocalization(Node):
         T_base_lidar = self.base_to_lidar()
         self.get_logger().info('Initial guess from {}: base at x {:.2f} y {:.2f} yaw {:.1f} deg'.format(
             self.legged_odom_topic, T_odom_base[0, 3], T_odom_base[1, 3],
-            math.degrees(math.atan2(T_odom_base[1, 0], T_odom_base[0, 0]))))
+            math.degrees(math.atan2(T_odom_base[1, 0], T_odom_base[0, 0]))), once=True)
         return inverse_se3(T_base_lidar) @ T_odom_base @ T_base_lidar @ inverse_se3(pose_to_mat(cur_odom.pose.pose))
 
     def cb_save_cur_scan(self, pc_msg):
