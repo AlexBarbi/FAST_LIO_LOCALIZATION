@@ -1,48 +1,39 @@
 <launch>
-  <!-- FAST-LIO odometry + global localization in a pre-built map.
-       TF: camera_init -> map_frame (transform_fusion, the inverse of map -> camera_init)
-           camera_init -> <lidar frame> (FAST-LIO)
-       map_frame hangs below camera_init, so camera_init keeps any parent it already has
-       (odom -> lio_map -> camera_init in the legged stack) and the FAR planner keeps its "map" (= camera_init).
-       config_file holds the FAST-LIO params under /** plus the global_localization and
-       transform_fusion sections; pick the one of your LiDAR (airy, avia, horizon, mid360, ouster64, velodyne).
-       Initial pose: with init_from_odom, global_localization guesses it from the legged estimator (/odom), assuming the
-       map was built by an exploration that started with the robot standing at the same spawn; it retries every
-       1/freq_localization s until ICP matches. publish_initial_pose.py (/initialpose) still overrides it. -->
-  <arg name="use_sim_time" default="true" description="Use simulation (Gazebo) clock if true"/>
-  <arg name="fast_lio" default="false" description="Run FAST-LIO here; false reuses the one of fast_lio_slam_launch.xml (/Odometry, /cloud_registered), which must be running"/>
-  <arg name="config_path" default="$(find-pkg-share fast_lio_localization)/config" description="Yaml config file path"/>
-  <arg name="config_file" default="airy.yaml" description="Config file"/>
-  <arg name="map" default="$(find-pkg-share map_generator)/save_data/optimized_map.pcd" description="Global map point cloud (.pcd)"/>
-  <arg name="map_frame" default="global_map" description="Frame of the global map, child of camera_init"/>
-  <arg name="python" default="$(env HOME)/RaNAV/.venv-yolo/bin/python" description="Interpreter for the localization scripts, it needs open3d (e.g. the python of a venv created with --system-site-packages)"/>
-  <arg name="init_from_odom" default="true" description="Take the initial pose from the legged estimator (/odom) instead of waiting for /initialpose"/>
-  <arg name="rviz" default="true" description="Use RViz to monitor results"/>
-  <arg name="rviz_cfg" default="$(find-pkg-share fast_lio_localization)/rviz_cfg/localization.rviz" description="RViz config file path (fixed frame global_map)"/>
+  <!-- Global localization in a pre-built map, on top of a running FAST-LIO: it reads /Odometry and /cloud_registered
+       (dense, in FAST-LIO's world frame odom_frame) and does not start FAST-LIO itself.
+       TF: odom_frame -> map_frame (transform_fusion, the inverse of map -> odom): map_frame hangs below FAST-LIO's
+       frame, so that one keeps any parent it already has.
+       Initial pose: /initialpose (RViz 2D Pose Estimate, or publish_initial_pose.py); with init_from_odom,
+       global_localization guesses it from a second odometry (legged_odom_topic) instead, see the script. -->
+  <arg name="map" description="Global map point cloud (.pcd)"/>
+  <arg name="map_frame" default="global_map" description="Frame of the global map, child of odom_frame"/>
+  <arg name="odom_frame" default="camera_init" description="FAST-LIO world frame, of /Odometry and /cloud_registered"/>
+  <arg name="fov" default="1.6" description="LiDAR horizontal FOV [rad]; more than 3.14 is a spinning LiDAR, the map is then cropped by distance only"/>
+  <arg name="fov_far" default="150.0" description="Map crop distance [m]"/>
+  <arg name="init_from_odom" default="false" description="Guess the initial pose from legged_odom_topic instead of waiting for /initialpose"/>
+  <arg name="python" default="python3" description="Interpreter for the localization scripts, it needs open3d (e.g. the python of a venv created with --system-site-packages)"/>
+  <arg name="use_sim_time" default="false"/>
+  <arg name="rviz" default="true"/>
+  <arg name="rviz_cfg" default="$(find-pkg-share fast_lio_localization)/rviz_cfg/localization.rviz" description="RViz config file (fixed frame global_map)"/>
 
-  <node if="$(var fast_lio)" pkg="fast_lio_localization" exec="fastlio_mapping" name="laser_mapping" output="screen">
-    <param from="$(var config_path)/$(var config_file)"/>
-    <param name="use_sim_time" value="$(var use_sim_time)"/>
-  </node>
-
-  <!-- localization -->
   <node pkg="fast_lio_localization" exec="global_localization.py" name="global_localization" output="screen"
         launch-prefix="$(var python)">
-    <param from="$(var config_path)/$(var config_file)"/>
     <param name="map_frame" value="$(var map_frame)"/>
+    <param name="odom_frame" value="$(var odom_frame)"/>
+    <param name="fov" value="$(var fov)"/>
+    <param name="fov_far" value="$(var fov_far)"/>
     <param name="init_from_odom" value="$(var init_from_odom)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 
-  <!-- transform fusion -->
   <node pkg="fast_lio_localization" exec="transform_fusion.py" name="transform_fusion" output="screen"
         launch-prefix="$(var python)">
-    <param from="$(var config_path)/$(var config_file)"/>
     <param name="map_frame" value="$(var map_frame)"/>
+    <param name="odom_frame" value="$(var odom_frame)"/>
     <param name="use_sim_time" value="$(var use_sim_time)"/>
   </node>
 
-  <!-- global map -->
+  <!-- the global map, on /map every 5 s -->
   <node pkg="pcl_ros" exec="pcd_to_pointcloud" name="map_publisher" output="screen">
     <param name="file_name" value="$(var map)"/>
     <param name="tf_frame" value="$(var map_frame)"/>

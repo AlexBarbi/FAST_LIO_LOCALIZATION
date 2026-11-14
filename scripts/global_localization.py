@@ -54,7 +54,7 @@ class GlobalLocalization(Node):
         # FAST-LIO world frame: /cloud_registered and /Odometry are expressed in it
         self.odom_frame = self.declare_parameter('odom_frame', 'camera_init').value
         # Initial guess from the legged estimator (see initial_guess_from_odom) instead of waiting for /initialpose
-        self.init_from_odom = self.declare_parameter('init_from_odom', True).value
+        self.init_from_odom = self.declare_parameter('init_from_odom', False).value
         self.legged_odom_topic = self.declare_parameter('legged_odom_topic', '/odom').value
         # The static TF between them is where the LiDAR sits on the base (FAST-LIO tree of fast_lio_slam_launch.xml)
         self.base_frame = self.declare_parameter('base_frame', 'lio_base').value
@@ -69,7 +69,6 @@ class GlobalLocalization(Node):
         self.cur_scan = None
 
         # publisher
-        self.pub_pc_in_map = self.create_publisher(PointCloud2, '/cur_scan_in_map', 1)
         self.pub_submap = self.create_publisher(PointCloud2, '/submap', 1)
         self.pub_map_to_odom = self.create_publisher(Odometry, '/map_to_odom', 1)
 
@@ -142,13 +141,13 @@ class GlobalLocalization(Node):
         self.get_logger().info('Global localization by scan-to-map matching......')
 
         with self.lock:
-            scan = self.cur_scan
+            scan_msg = self.cur_scan
             cur_odom = self.cur_odom
-        if scan is None or cur_odom is None:
+        if scan_msg is None or cur_odom is None:
             self.get_logger().warn('First scan or odometry not received!!!!!')
             return False
         scan_tobe_mapped = o3d.geometry.PointCloud()
-        scan_tobe_mapped.points = o3d.utility.Vector3dVector(scan)
+        scan_tobe_mapped.points = o3d.utility.Vector3dVector(msg_to_array(scan_msg))
 
         tic = time.time()
 
@@ -255,13 +254,10 @@ class GlobalLocalization(Node):
 
     def cb_save_cur_scan(self, pc_msg):
         # 注意这里fastlio直接将scan转到odom系下了 不是lidar局部系
-        pc_msg.header.frame_id = self.odom_frame
-        pc_msg.header.stamp = self.get_clock().now().to_msg()
-        self.pub_pc_in_map.publish(pc_msg)
-
-        pc = msg_to_array(pc_msg)
+        # The scan is already in odom_frame. It is kept as it came and turned into points only by global_localization():
+        # at 0.5 Hz, not for every scan (upstream also republished each one, unchanged, as /cur_scan_in_map)
         with self.lock:
-            self.cur_scan = pc
+            self.cur_scan = pc_msg
 
     def cb_initial_pose(self, pose_msg):
         if self.global_map is None:
