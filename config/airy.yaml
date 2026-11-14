@@ -1,5 +1,5 @@
 # Simulated RoboSense Airy of the Aliengo, FAST-LIO params copied from
-# legged_gazebo/config/fast_lio_airy.yaml (keep imu_R and extrinsic_R in sync with it).
+# ranav_bringup/config/fast_lio_airy.yaml (keep imu_R and extrinsic_R in sync with it).
 # The Airy is pitched 5 deg forward, imu_R/extrinsic_R rotate it into the upright base frame (15 deg until 2026-10-13).
 /**:
     ros__parameters:

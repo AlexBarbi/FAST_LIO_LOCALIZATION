@@ -13,7 +13,7 @@
   <arg name="fast_lio" default="false" description="Run FAST-LIO here; false reuses the one of fast_lio_slam_launch.xml (/Odometry, /cloud_registered), which must be running"/>
   <arg name="config_path" default="$(find-pkg-share fast_lio_localization)/config" description="Yaml config file path"/>
   <arg name="config_file" default="airy.yaml" description="Config file"/>
-  <arg name="map" default="$(env HOME)/RaNAV/src/FAST_LIO_SLAM_ROS2/save_data/optimized_map.pcd" description="Global map point cloud (.pcd)"/>
+  <arg name="map" default="$(find-pkg-share map_generator)/save_data/optimized_map.pcd" description="Global map point cloud (.pcd)"/>
   <arg name="map_frame" default="global_map" description="Frame of the global map, child of camera_init"/>
   <arg name="python" default="$(env HOME)/RaNAV/.venv-yolo/bin/python" description="Interpreter for the localization scripts, it needs open3d (e.g. the python of a venv created with --system-site-packages)"/>
   <arg name="init_from_odom" default="true" description="Take the initial pose from the legged estimator (/odom) instead of waiting for /initialpose"/>
